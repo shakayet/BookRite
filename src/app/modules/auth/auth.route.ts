@@ -4,6 +4,8 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { AuthController } from './auth.controller';
 import { AuthValidation } from './auth.validation';
+import verifyFirebaseToken from '../../middlewares/firebaseAuth';
+import { UserController } from '../user/user.controller';
 const router = express.Router();
 
 router.post(

@@ -11,7 +11,13 @@ const getAllBanners = async (): Promise<IBanner[]> => {
   return result;
 };
 
+const deleteBannerById = async (id: string) => {
+  const result = await Banner.findByIdAndDelete(id);
+  return result;
+};
+
 export const BannerService = {
   createBanner,
   getAllBanners,
+  deleteBannerById,
 };

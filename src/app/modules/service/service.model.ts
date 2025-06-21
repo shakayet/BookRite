@@ -30,9 +30,17 @@ const serviceSchema = new Schema<IService>(
         },
         paymentStatus: { 
           type: Boolean,
-          Default: false, 
+          default: false,
+          required: true, 
+        },
+        serviceStatus: {
+          type: String,
+          enum: ['Pending', 'Accept', 'Complete', 'Cancel'],
+          default: 'Pending',
         },
         user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        rating: { type: Number, min: 1, max: 5 },
+        recommended: { type: Boolean, default: false },
       },
     ],
   },

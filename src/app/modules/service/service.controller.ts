@@ -126,6 +126,7 @@ const updateService = catchAsync(async (req: Request, res: Response) => {
 const bookServiceSlot = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const result = await ServiceService.bookServiceSlot(req.params.id, req.body, user);
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -133,6 +134,75 @@ const bookServiceSlot = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const getProviderDashboard = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const result = await ServiceService.getProviderDashboard(user);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Provider dashboard fetched successfully',
+    data: result,
+  });
+});
+
+const updateBookingStatus = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const { serviceId, bookingId } = req.params;
+  console.log(req.body.serviceStatus);
+  const result = await ServiceService.updateBookingStatus(serviceId, bookingId, req.body.serviceStatus, user);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Booking status updated successfully',
+    data: result,
+  });
+});
+
+
+const rateBooking = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const { serviceId, bookingId } = req.params;
+  const { rating, recommended } = req.body;
+
+  const result = await ServiceService.rateBooking(serviceId, bookingId, user, rating, recommended);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Service rated successfully',
+    data: result,
+  });
+});
+
+const getTopRecommendedServices = catchAsync(async (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 20;
+  const result = await ServiceService.getMostRecommendedServices(limit);
+  
+  if (result.length === 0) {
+    // Log this for debugging
+    console.warn('No recommended services found despite querying');
+    // Optionally return different status code
+    return sendResponse(res, {
+      statusCode: httpStatus.NO_CONTENT,
+      success: true,
+      message: 'No recommended services found yet',
+      data: []
+    });
+  }
+  
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: result.length > 1 
+      ? 'Top recommended services fetched successfully' 
+      : 'Recommended service fetched successfully',
+    data: result,
+  });
+});
+
 
 export const ServiceController = {
   createService,
@@ -147,4 +217,8 @@ export const ServiceController = {
   deleteService,
   updateService,
   bookServiceSlot,
+  getProviderDashboard,
+  updateBookingStatus,
+  rateBooking,
+  getTopRecommendedServices,
 };

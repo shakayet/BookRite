@@ -28,10 +28,10 @@ const serviceSchema = new Schema<IService>(
           ],
           required: true,
         },
-        paymentStatus: { 
+        paymentStatus: {
           type: Boolean,
           default: false,
-          required: true, 
+          required: true,
         },
         serviceStatus: {
           type: String,
@@ -43,6 +43,9 @@ const serviceSchema = new Schema<IService>(
         recommended: { type: String },
       },
     ],
+
+    averageRating: { type: Number },
+    totalRatings: { type: Number },
   },
   { timestamps: true }
 );

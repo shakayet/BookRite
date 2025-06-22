@@ -5,6 +5,9 @@ import { ClothRoutes } from '../app/modules/cloth/cloth.routes';
 import { ServiceRoutes } from '../app/modules/service/service.routes';
 import { CategoryRoutes } from '../app/modules/category/category.routes';
 import { BannerRoutes } from '../app/modules/banner/banner.routes';
+import paymentRoutes from '../app/modules/payment/payment.routes';
+
+
 const router = express.Router();
 
 
@@ -32,6 +35,10 @@ const apiRoutes = [
   {
     path: '/banners',
     route: BannerRoutes,
+  },
+  {
+    path: '/payments',
+    route: paymentRoutes,
   }
 ];
 

@@ -11,6 +11,7 @@ export interface IBooking {
   user: Types.ObjectId;
   rating?: number;
   recommended?: string;
+  paymentDate?: Date;
 }
 
 export interface IService {
@@ -22,4 +23,6 @@ export interface IService {
   location: string;
   createdBy: Types.ObjectId;
   bookings?: IBooking[];
+  averageRating?: number;  
+  totalRatings?: number;   
 }

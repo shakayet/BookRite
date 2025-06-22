@@ -14,12 +14,12 @@ class QueryBuilder<T> {
       this.modelQuery = this.modelQuery.find({
         $or: searchableFields.map(
           field =>
-            ({
-              [field]: {
-                $regex: this.query.searchTerm,
-                $options: 'i',
-              },
-            } as FilterQuery<T>)
+          ({
+            [field]: {
+              $regex: this.query.searchTerm,
+              $options: 'i',
+            },
+          } as FilterQuery<T>)
         ),
       });
     }
@@ -27,14 +27,14 @@ class QueryBuilder<T> {
   }
 
   //filtering
-  filter() {
-    const queryObj = { ...this.query };
-    const excludeFields = ['searchTerm', 'sort', 'page', 'limit', 'fields'];
-    excludeFields.forEach(el => delete queryObj[el]);
+  // filter() {
+  //   const queryObj = { ...this.query };
+  //   const excludeFields = ['searchTerm', 'sort', 'page', 'limit', 'fields'];
+  //   excludeFields.forEach(el => delete queryObj[el]);
 
-    this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
-    return this;
-  }
+  //   this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
+  //   return this;
+  // }
 
   //sorting
   sort() {
@@ -90,6 +90,41 @@ class QueryBuilder<T> {
       page,
       totalPage,
     };
+  }
+
+  filter() {
+    const queryObj = { ...this.query };
+    const excludeFields = [
+      'searchTerm',
+      'sort',
+      'page',
+      'limit',
+      'fields',
+      'minPrice',
+      'maxPrice',
+      'minRating'
+    ];
+    excludeFields.forEach(el => delete queryObj[el]);
+
+    // Handle price range
+    const priceRange: Record<string, unknown> = {};
+    if (this.query.minPrice) {
+      priceRange.$gte = Number(this.query.minPrice);
+    }
+    if (this.query.maxPrice) {
+      priceRange.$lte = Number(this.query.maxPrice);
+    }
+    if (Object.keys(priceRange).length > 0) {
+      queryObj.price = priceRange;
+    }
+
+    // Handle rating filter
+    if (this.query.minRating) {
+      queryObj.averageRating = { $gte: Number(this.query.minRating) };
+    }
+
+    this.modelQuery = this.modelQuery.find(queryObj as FilterQuery<T>);
+    return this;
   }
 }
 

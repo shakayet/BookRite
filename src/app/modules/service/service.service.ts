@@ -3,6 +3,7 @@ import ApiError from '../../../errors/ApiError';
 import { IBooking, IService } from './service.interface';
 import { Service } from './service.model';
 import { Types, Document } from 'mongoose';
+import QueryBuilder from '../../builder/QueryBuilder';
 
 const createService = async (data: any, user: any) => {
   const serviceData = { ...data, createdBy: user.id };
@@ -11,7 +12,16 @@ const createService = async (data: any, user: any) => {
 };
 
 const getAllServices = async (query: any) => {
-  return await Service.find(query).populate('createdBy');
+  const searchableFields = ['title', 'description', 'location'];
+  const servicesQuery = new QueryBuilder(Service.find(), query)
+    .search(searchableFields)
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
+
+  const result = await servicesQuery.modelQuery.populate('createdBy');
+  return result;
 };
 
 const getServicesByCategory = async (category: string) => {
@@ -258,57 +268,12 @@ const cancelBooking = async (serviceId: string, bookingId: string, user: any) =>
   return cancelledBooking;
 };
 
-// const rateBooking = async (
-//   serviceId: string,
-//   bookingId: string,
-//   user: any,
-//   rating: number,
-//   recommended: boolean
-// ) => {
-//   // Validate rating range
-//   if (rating < 1 || rating > 5) {
-//     throw new ApiError(httpStatus.BAD_REQUEST, 'Rating must be between 1 and 5');
-//   }
-
-//   // Atomic update using arrayFilters
-//   const updatedService = await Service.findOneAndUpdate(
-//     {
-//       _id: new Types.ObjectId(serviceId),
-//       'bookings._id': new Types.ObjectId(bookingId),
-//       'bookings.user': new Types.ObjectId(user.id)
-//     },
-//     {
-//       $set: {
-//         'bookings.$.rating': rating,
-//         'bookings.$.recommended': recommended,
-//         'bookings.$.updatedAt': new Date()
-//       }
-//     },
-//     {
-//       new: true,
-//       runValidators: true
-//     }
-//   ).populate('bookings.user');
-
-//   console.log(rating, recommended);
-
-//   if (!updatedService) {
-//     throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found or unauthorized');
-//   }
-
-//   const ratedBooking = updatedService.bookings?.find(b => 
-//     b._id?.toString() === bookingId
-//   );
-
-//   return updatedService;
-// };
-
 const rateBooking = async (
   serviceId: string,
   bookingId: string,
   user: any,
   rating: number,
-  recommended: boolean
+  recommended: string
 ) => {
   // Validate rating range
   if (rating < 1 || rating > 5) {
@@ -333,41 +298,31 @@ const rateBooking = async (
 
   // Perform the atomic update
   const updatedService = await Service.findOneAndUpdate(
-    {
-      _id: serviceObjId,
-      'bookings._id': bookingObjId
-    },
-    {
-      $set: {
+    { _id: serviceId, 'bookings._id': bookingId },
+    { 
+      $set: { 
         'bookings.$.rating': rating,
         'bookings.$.recommended': recommended,
-        'bookings.$.updatedAt': new Date()
-      }
+      } 
     },
-    {
-      new: true,
-      runValidators: true
-    }
+    { new: true }
   );
 
-  if (!updatedService) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to update booking');
+  // Recalculate average rating using updated document
+  if (updatedService) {
+    const validBookings = updatedService.bookings?.filter(b => 
+      b.rating  && b.serviceStatus === 'Complete'
+    ) || [];
+    
+    const totalRatings = validBookings.length;
+    const totalRatingSum = validBookings.reduce((sum, b) => sum + b.rating!, 0);
+    const averageRating = totalRatings ? totalRatingSum / totalRatings : 0;
+
+    // Update and save the document directly
+    updatedService.averageRating = averageRating;
+    updatedService.totalRatings = totalRatings;
+    await updatedService.save();
   }
-
-  // Find the specific updated booking
-  const ratedBooking = updatedService.bookings?.find(b => 
-    b._id?.equals(bookingObjId)
-  );
-
-  if (!ratedBooking) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve updated booking');
-  }
-
-  // Now populate just the user for this specific booking
-  await Service.populate(ratedBooking, {
-    path: 'user',
-    model: 'User'
-  });
 
   return updatedService;
 };

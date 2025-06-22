@@ -3,6 +3,7 @@ import httpStatus from 'http-status-codes';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { ServiceService } from './service.service';
+import ApiError from '../../../errors/ApiError';
 
 const createService = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
@@ -147,10 +148,13 @@ const getProviderDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+
+// now work on this 
+
 const updateBookingStatus = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const { serviceId, bookingId } = req.params;
-  console.log(req.body.serviceStatus);
+
   const result = await ServiceService.updateBookingStatus(serviceId, bookingId, req.body.serviceStatus, user);
 
   sendResponse(res, {
@@ -202,6 +206,8 @@ const getTopRecommendedServices = catchAsync(async (req: Request, res: Response)
     data: result,
   });
 });
+
+
 
 
 export const ServiceController = {

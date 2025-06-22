@@ -38,6 +38,20 @@ const userSchema = new Schema<IUser, UserModal>(
       enum: ['active', 'delete'],
       default: 'active',
     },
+    portfolio: [
+      {
+        title: { type: String, required: true },
+        images: [{ type: String, required: true }],
+        description: { type: String },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+    bookings: [
+      {
+        bookingId: { type: Schema.Types.ObjectId, required: true },
+        serviceId: { type: Schema.Types.ObjectId, ref: 'Service', required: true }
+      }
+    ],
     isLocationGranted: {
       type: Boolean,
       default: false,
@@ -70,6 +84,14 @@ const userSchema = new Schema<IUser, UserModal>(
   },
   { timestamps: true }
 );
+
+
+// userSchema.virtual('bookings', {
+//   ref: 'Service',
+//   localField: '_id',
+//   foreignField: 'bookings.user',
+//   options: { sort: { 'bookings.createdAt': -1 } }
+// });
 
 //exist user check
 userSchema.statics.isExistUserById = async (id: string) => {

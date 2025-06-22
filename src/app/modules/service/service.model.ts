@@ -40,11 +40,12 @@ const serviceSchema = new Schema<IService>(
         },
         user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         rating: { type: Number, min: 1, max: 5 },
-        recommended: { type: Boolean, default: false },
+        recommended: { type: String },
       },
     ],
   },
   { timestamps: true }
 );
+
 
 export const Service = model<IService>('Service', serviceSchema);

@@ -77,51 +77,69 @@ const updateService = async (id: string, payload: Partial<IService>, user: any) 
 };
 
 const bookServiceSlot = async (
-  id: string,
-  data: { date: string; timeSlot: IBooking['timeSlot']; paymentStatus: IBooking['paymentStatus']; serviceStatus: IBooking['serviceStatus'] },
+  serviceId: string,
+  data: { date: string; timeSlot: IBooking['timeSlot']; paymentStatus: IBooking['paymentStatus']; serviceStatus: IBooking['serviceStatus']},
   user: any
 ) => {
-  const { date, timeSlot, paymentStatus, serviceStatus, } = data;
-
+  const { date, timeSlot, paymentStatus, serviceStatus } = data;
+  
   // Check if service exists
-  const serviceExists = await Service.exists({ _id: id });
+  const serviceExists = await Service.exists({ _id: serviceId });
   if (!serviceExists) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Service not found');
   }
 
-  // Check for existing booking conflict using MongoDB query
+  // Improved conflict check - only consider non-cancelled bookings
   const conflict = await Service.findOne({
-    _id: id,
+    _id: serviceId,
     bookings: {
       $elemMatch: {
         date,
-        paymentStatus,
-        serviceStatus,
         timeSlot,
-      },
-    },
+        cancelled: { $ne: true } // Only conflict if not cancelled
+      }
+    }
   });
 
   if (conflict) {
-    throw new ApiError(httpStatus.CONFLICT, 'This slot is already booked.');
+    throw new ApiError(httpStatus.CONFLICT, 'This slot is already booked');
   }
 
-  // Book the new slot using atomic push
+  const bookingData = {
+    date,
+    timeSlot,
+    paymentStatus,
+    serviceStatus,
+    user: new Types.ObjectId(user.id),
+    createdAt: new Date()
+  };
+
+  // Update service with new booking
   const updatedService = await Service.findByIdAndUpdate(
-    id,
-    {
-      $push: {
-        bookings: {
-          date,
-          timeSlot,
-          paymentStatus,
-          serviceStatus,
-          user: new Types.ObjectId(user.id),
-        },
-      },
-    },
+    serviceId,
+    { $push: { bookings: bookingData } },
     { new: true }
   );
+
+  if (!updatedService) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to book service slot');
+  }
+
+  // Get the newly created booking ID
+  const newBooking = updatedService.bookings?.slice(-1)[0];
+  if (!newBooking || !newBooking._id) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to create booking');
+  }
+
+  // Update user document with booking reference
+  await user.findByIdAndUpdate(user.id, {
+    $push: {
+      bookings: {
+        bookingId: newBooking._id,
+        serviceId: new Types.ObjectId(serviceId)
+      }
+    }
+  });
 
   return updatedService;
 };
@@ -181,47 +199,18 @@ const getProviderDashboard = async (user: any) => {
   };
 };
 
-// const updateBookingStatus = async (
-//   serviceId: string,
-//   bookingId: string,
-//   status: 'Accept' | 'Complete',
-//   user: any
-// ) => {
-//   const service = await Service.findOne({ _id: serviceId, createdBy: user.id });
-
-//   if (!service) throw new ApiError(httpStatus.NOT_FOUND, 'Service not found or unauthorized');
-
-//   const booking = service.bookings?.find(b => b._id?.toString() === bookingId);
-//   if (!booking) throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found');
-
-//   booking.serviceStatus = status;
-
-//   await service.save();
-//   return booking;
-// };
-
 
 const updateBookingStatus = async (
   serviceId: string,
   bookingId: string,
-  status: 'Accept' | 'Complete',
+  status: string,
   user: any
 ) => {
-  // First validate the service exists and belongs to the provider
-  const service = await Service.findOne({
-    _id: new Types.ObjectId(serviceId),
-    createdBy: new Types.ObjectId(user.id)
-  });
-
-  if (!service) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Service not found or unauthorized');
-  }
-
-  // Use atomic update with arrayFilters to directly modify the booking
+  // Update booking in service
   const updatedService = await Service.findOneAndUpdate(
     {
-      _id: new Types.ObjectId(serviceId),
-      'bookings._id': new Types.ObjectId(bookingId)
+      _id: serviceId,
+      'bookings._id': bookingId
     },
     {
       $set: {
@@ -229,26 +218,11 @@ const updateBookingStatus = async (
         'bookings.$.updatedAt': new Date()
       }
     },
-    {
-      new: true,
-      runValidators: true
-    }
-  ).populate('bookings.user');
-
-  if (!updatedService) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found');
-  }
-
-  // Find and return the updated booking
-  const updatedBooking = updatedService.bookings?.find(b => 
-    b._id?.toString() === bookingId
+    { new: true }
   );
+  console.log(updateService);
 
-  if (!updatedBooking) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found after update');
-  }
-
-  return updatedBooking;
+  return updatedService;
 };
 
 
@@ -472,6 +446,8 @@ const getMostRecommendedServices = async (limit: number = 20) => {
   
   return result;
 };
+
+
 
 export const ServiceService = {
   createService,

@@ -30,4 +30,10 @@ router
     UserController.createUser
   );
 
+router.post('/portfolio',auth(USER_ROLES.PROVIDER),UserController.addPortfolioItem);
+router.get('/:userId/portfolio',UserController.getPortfolioItems);
+router.delete('/portfolio/:itemId',auth(USER_ROLES.PROVIDER),UserController.deletePortfolioItem);
+router.get('/:userId/portfolio/:portfolioId', UserController.getSinglePortfolioItem);
+router.get('/bookings',auth(USER_ROLES.USER),UserController.getUserBookings);
+
 export const UserRoutes = router;

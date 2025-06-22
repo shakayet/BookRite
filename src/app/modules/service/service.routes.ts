@@ -24,6 +24,4 @@ router.patch('/rate-booking/:serviceId/:bookingId',auth(USER_ROLES.USER),Service
 router.get('/recommended/top', ServiceController.getTopRecommendedServices);
 
 
-
-
 export const ServiceRoutes=router

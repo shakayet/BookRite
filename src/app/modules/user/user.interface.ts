@@ -1,5 +1,19 @@
-import { Model } from 'mongoose';
+// user.interface.ts
+import { Model, Types } from 'mongoose';
 import { USER_ROLES } from '../../../enums/user';
+
+export interface IPortfolioItem {
+  _id?: Types.ObjectId;
+  title: string;
+  images: string[];
+  description?: string;
+  createdAt?: Date;
+}
+
+export interface IUserBookingRef {
+  bookingId: Types.ObjectId;
+  serviceId: Types.ObjectId;
+}
 
 export type IUser = {
   name: string;
@@ -12,7 +26,9 @@ export type IUser = {
   image?: string;
   address?: string;
   status: 'active' | 'delete';
+  portfolio?: IPortfolioItem[];
   verified: boolean;
+  bookings?: IUserBookingRef[]; // Add bookings to user
   authentication?: {
     isResetPassword: boolean;
     oneTimeCode: number;

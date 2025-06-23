@@ -6,9 +6,14 @@ import { ServiceRoutes } from '../app/modules/service/service.routes';
 import { CategoryRoutes } from '../app/modules/category/category.routes';
 import { BannerRoutes } from '../app/modules/banner/banner.routes';
 import paymentRoutes from '../app/modules/payment/payment.routes';
+import { ChatRoutes } from "../app/modules/chat/chat.route";
+import { MessageRoutes } from "../app/modules/message/message.routes";
 
 
 const router = express.Router();
+
+router.use("/chat", ChatRoutes);
+router.use("/message", MessageRoutes);
 
 
 const apiRoutes = [

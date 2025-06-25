@@ -6,8 +6,8 @@ class SocketHelper {
   private static io: Server;
 
   static initialize(ioInstance: Server) {
-    this.io = ioInstance;
-    this.io.on('connection', this.handleConnection);
+    SocketHelper.io = ioInstance;
+    ioInstance.on('connection', SocketHelper.handleConnection);
   }
 
   private static handleConnection(socket: Socket) {
@@ -22,10 +22,10 @@ class SocketHelper {
       try {
         const { chatId, senderId, receiverId, text } = data;
         const message = await Message.create({ chatId, senderId, text });
-        
-        // Emit to both sender and receiver
-        this.io.to(senderId).emit('receive_message', message);
-        this.io.to(receiverId).emit('receive_message', message);
+
+        // Use the stored static `io` reference
+        SocketHelper.io.to(senderId).emit('receive_message', message);
+        SocketHelper.io.to(receiverId).emit('receive_message', message);
       } catch (err) {
         errorLogger.error('❌ Error saving message:', err);
       }

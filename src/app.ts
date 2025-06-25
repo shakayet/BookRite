@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
 import router from './routes';
 import { Morgan } from './shared/morgen';
+import { NotificationRoutes } from './app/modules/notification/notification.routes';
 const app = express();
 
 //morgan
@@ -20,6 +21,7 @@ app.use(express.static('uploads'));
 
 //router
 app.use('/api/v1', router);
+app.use('/api/v1/notifications', NotificationRoutes);
 
 //live response
 app.get('/', (req: Request, res: Response) => {

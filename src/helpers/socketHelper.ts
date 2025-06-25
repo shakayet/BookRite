@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { Message } from '../app/modules/message/message.model';
 import { errorLogger, logger } from '../shared/logger';
+import { Notification } from '../app/modules/notification/notification.model';
 
 class SocketHelper {
   private static io: Server;
@@ -26,6 +27,13 @@ class SocketHelper {
         // Use the stored static `io` reference
         SocketHelper.io.to(senderId).emit('receive_message', message);
         SocketHelper.io.to(receiverId).emit('receive_message', message);
+
+        // Added for notification
+        await Notification.create({
+          userId: receiverId,
+          message: 'You received a new message!',
+          type: 'message',
+        });
       } catch (err) {
         errorLogger.error('❌ Error saving message:', err);
       }

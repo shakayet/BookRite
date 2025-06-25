@@ -4,6 +4,8 @@ import { IBooking, IService } from './service.interface';
 import { Service } from './service.model';
 import { Types, Document } from 'mongoose';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { Notification } from '../notification/notification.model';
+import { User } from '../user/user.model';
 
 const createService = async (data: any, user: any) => {
   const serviceData = { ...data, createdBy: user.id };
@@ -88,16 +90,18 @@ const updateService = async (id: string, payload: Partial<IService>, user: any) 
 
 const bookServiceSlot = async (
   serviceId: string,
-  data: { date: string; timeSlot: IBooking['timeSlot']; paymentStatus: IBooking['paymentStatus']; serviceStatus: IBooking['serviceStatus']},
+  data: Partial<IBooking>,
   user: any
 ) => {
   const { date, timeSlot, paymentStatus, serviceStatus } = data;
-  
+
   // Check if service exists
   const serviceExists = await Service.exists({ _id: serviceId });
   if (!serviceExists) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Service not found');
   }
+
+  const service = await Service.findById(serviceId);
 
   // Improved conflict check - only consider non-cancelled bookings
   const conflict = await Service.findOne({
@@ -142,7 +146,7 @@ const bookServiceSlot = async (
   }
 
   // Update user document with booking reference
-  await user.findByIdAndUpdate(user.id, {
+  await User.findByIdAndUpdate(user.id, {
     $push: {
       bookings: {
         bookingId: newBooking._id,
@@ -151,12 +155,20 @@ const bookServiceSlot = async (
     }
   });
 
+  // Added for notification
+
+  await Notification.create({
+    userId: service?.createdBy,
+    message: `Your service "${service?.title}" was just booked!`,
+    type: 'booking',
+  });
+
   return updatedService;
 };
 
 const getProviderDashboard = async (user: any) => {
   console.log(`Fetching dashboard for provider: ${user.id}`);
-  
+
   const services = await Service.find({ createdBy: user.id }).populate('bookings.user');
   console.log(`Found ${services.length} services for this provider`);
 
@@ -167,12 +179,12 @@ const getProviderDashboard = async (user: any) => {
 
   services.forEach(service => {
     console.log(`Service ${service._id} has ${service.bookings?.length || 0} bookings`);
-    
+
     if (service.bookings && service.bookings.length > 0) {
       service.bookings.forEach(booking => {
         const bookingObj = booking instanceof Document ? booking.toObject() : booking;
         console.log(`Booking status: ${bookingObj.serviceStatus}`);
-        
+
         totalBookings.push({
           ...bookingObj,
           serviceId: service._id,
@@ -261,7 +273,7 @@ const cancelBooking = async (serviceId: string, bookingId: string, user: any) =>
     throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found or unauthorized');
   }
 
-  const cancelledBooking = updatedService.bookings?.find(b => 
+  const cancelledBooking = updatedService.bookings?.find(b =>
     b._id?.toString() === bookingId
   );
 
@@ -299,21 +311,21 @@ const rateBooking = async (
   // Perform the atomic update
   const updatedService = await Service.findOneAndUpdate(
     { _id: serviceId, 'bookings._id': bookingId },
-    { 
-      $set: { 
+    {
+      $set: {
         'bookings.$.rating': rating,
         'bookings.$.recommended': recommended,
-      } 
+      }
     },
     { new: true }
   );
 
   // Recalculate average rating using updated document
   if (updatedService) {
-    const validBookings = updatedService.bookings?.filter(b => 
-      b.rating  && b.serviceStatus === 'Complete'
+    const validBookings = updatedService.bookings?.filter(b =>
+      b.rating && b.serviceStatus === 'Complete'
     ) || [];
-    
+
     const totalRatings = validBookings.length;
     const totalRatingSum = validBookings.reduce((sum, b) => sum + b.rating!, 0);
     const averageRating = totalRatings ? totalRatingSum / totalRatings : 0;
@@ -398,7 +410,7 @@ const getMostRecommendedServices = async (limit: number = 20) => {
 
   // Debug log to check raw data
   console.log('Recommended services aggregation result:', result);
-  
+
   return result;
 };
 

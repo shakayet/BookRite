@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { Message } from '../app/modules/message/message.model';
-import { errorLogger, logger } from '../shared/logger';
 import { Notification } from '../app/modules/notification/notification.model';
+import { errorLogger, logger } from '../shared/logger';
 
 class SocketHelper {
   private static io: Server;
@@ -22,20 +22,25 @@ class SocketHelper {
     socket.on('send_message', async (data) => {
       try {
         const { chatId, senderId, receiverId, text } = data;
+
+        // Save the message
         const message = await Message.create({ chatId, senderId, text });
 
-        // Use the stored static `io` reference
+        // Emit message to both users
         SocketHelper.io.to(senderId).emit('receive_message', message);
         SocketHelper.io.to(receiverId).emit('receive_message', message);
 
-        // Added for notification
-        await Notification.create({
+        // Create the notification
+        const notification = await Notification.create({
           userId: receiverId,
           message: 'You received a new message!',
           type: 'message',
         });
+
+        // Emit the notification to the receiver
+        SocketHelper.io.to(receiverId).emit('receive_notification', notification);
       } catch (err) {
-        errorLogger.error('❌ Error saving message:', err);
+        errorLogger.error('❌ Error saving message or notification:', err);
       }
     });
 

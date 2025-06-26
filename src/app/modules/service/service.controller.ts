@@ -4,6 +4,8 @@ import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { ServiceService } from './service.service';
 import ApiError from '../../../errors/ApiError';
+import { Notification } from '../notification/notification.model';
+import SocketHelper from '../../../helpers/socketHelper';
 
 const createService = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;

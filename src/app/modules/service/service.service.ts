@@ -6,6 +6,7 @@ import { Types, Document } from 'mongoose';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { Notification } from '../notification/notification.model';
 import { User } from '../user/user.model';
+import SocketHelper from '../../../helpers/socketHelper';
 
 const createService = async (data: any, user: any) => {
   const serviceData = { ...data, createdBy: user.id };
@@ -95,7 +96,7 @@ const bookServiceSlot = async (
 ) => {
   const { date, timeSlot, paymentStatus, serviceStatus } = data;
 
-  // Check if service exists
+  // ✅ Check if service exists
   const serviceExists = await Service.exists({ _id: serviceId });
   if (!serviceExists) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Service not found');
@@ -103,14 +104,14 @@ const bookServiceSlot = async (
 
   const service = await Service.findById(serviceId);
 
-  // Improved conflict check - only consider non-cancelled bookings
+  // ✅ Check for slot conflict
   const conflict = await Service.findOne({
     _id: serviceId,
     bookings: {
       $elemMatch: {
         date,
         timeSlot,
-        cancelled: { $ne: true } // Only conflict if not cancelled
+        cancelled: { $ne: true }
       }
     }
   });
@@ -119,6 +120,7 @@ const bookServiceSlot = async (
     throw new ApiError(httpStatus.CONFLICT, 'This slot is already booked');
   }
 
+  // ✅ Create booking object
   const bookingData = {
     date,
     timeSlot,
@@ -128,7 +130,7 @@ const bookServiceSlot = async (
     createdAt: new Date()
   };
 
-  // Update service with new booking
+  // ✅ Push booking into the service
   const updatedService = await Service.findByIdAndUpdate(
     serviceId,
     { $push: { bookings: bookingData } },
@@ -139,13 +141,13 @@ const bookServiceSlot = async (
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to book service slot');
   }
 
-  // Get the newly created booking ID
+  // ✅ Get the last booking added
   const newBooking = updatedService.bookings?.slice(-1)[0];
   if (!newBooking || !newBooking._id) {
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to create booking');
   }
 
-  // Update user document with booking reference
+  // ✅ Save booking reference in user
   await User.findByIdAndUpdate(user.id, {
     $push: {
       bookings: {
@@ -155,13 +157,20 @@ const bookServiceSlot = async (
     }
   });
 
-  // Added for notification
-
+  // ✅ Save notification to DB
   await Notification.create({
     userId: service?.createdBy,
     message: `Your service "${service?.title}" was just booked!`,
     type: 'booking',
   });
+
+  // ✅ Emit real-time notification to the service provider
+  if (service?.createdBy) {
+    SocketHelper.io.to(service.createdBy.toString()).emit('receive_notification', {
+      message: `Your service "${service.title}" was just booked!`,
+      type: 'booking',
+    });
+  }
 
   return updatedService;
 };

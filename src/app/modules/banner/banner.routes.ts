@@ -5,8 +5,14 @@ import { createBannerZodSchema } from './banner.validation';
 
 const router = express.Router();
 
-router.post('/', validateRequest(createBannerZodSchema), BannerController.createBanner);
-router.get('/', BannerController.getAllBanners);
+router.route('/')
+    .post(
+        validateRequest(createBannerZodSchema), 
+        BannerController.createBanner
+    )
+    .get(
+        BannerController.getAllBanners
+    );
 router.delete('/:id', BannerController.deleteBanner);
 
 

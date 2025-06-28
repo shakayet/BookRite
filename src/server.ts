@@ -8,7 +8,7 @@ import config from './config';
 import app from './app';
 import { seedSuperAdmin } from './DB/seedAdmin';
 import { errorLogger, logger } from './shared/logger';
-import SocketHelper from './helpers/socketHelper'; // Updated import
+import { socketHelper } from './helpers/socketHelper';
 
 process.on('uncaughtException', error => {
   errorLogger.error('Uncaught Exception Detected', error);
@@ -31,18 +31,20 @@ async function main() {
     const port = typeof config.port === 'number' ? config.port : Number(config.port);
     server = http.createServer(app);
 
-    // Socket.IO setup
+    // ✅ Socket.IO setup
     const io = new Server(server, {
       pingTimeout: 60000,
       cors: {
-        origin: config.client_url,
+        origin: '*', // change to config.client_url for stricter setup
         methods: ['GET', 'POST'],
         credentials: true
       }
     });
 
-    // Initialize sockets
-    SocketHelper.initialize(io);
+    // ✅ Use your new socket helper
+    socketHelper.socket(io);
+
+       (global as any).io = io;
 
     server.listen(port, config.ip_address as string, () => {
       logger.info(colors.yellow(`🚀 Server running on port: ${port}`));

@@ -7,46 +7,57 @@ class SocketHelper {
   private static io: Server;
 
   static initialize(ioInstance: Server) {
-    SocketHelper.io = ioInstance;
-    ioInstance.on('connection', SocketHelper.handleConnection);
+    this.io = ioInstance;
+    this.io.on('connection', this.handleConnection.bind(this));
   }
 
   private static handleConnection(socket: Socket) {
     logger.info(`✅ Socket connected: ${socket.id}`);
 
-    socket.on('join', (userId: string) => {
-      socket.join(userId);
-      logger.info(`🔔 User ${userId} joined`);
-    });
+    socket.on('join', (userId: string) => this.handleJoin(socket, userId));
+    socket.on('send_message', (data) => this.handleSendMessage(socket, data));
+    socket.on('disconnect', () => this.handleDisconnect(socket));
+  }
 
-    socket.on('send_message', async (data) => {
-      try {
-        const { chatId, senderId, receiverId, text } = data;
+  private static handleJoin(socket: Socket, userId: string) {
+    socket.join(userId);
+    logger.info(`🔔 User ${userId} joined room`);
+  }
 
-        // Save the message
-        const message = await Message.create({ chatId, senderId, text });
+  private static async handleSendMessage(
+    socket: Socket,
+    data: {
+      chatId: string;
+      senderId: string;
+      receiverId: string;
+      text: string;
+    }
+  ) {
+    try {
+      const { chatId, senderId, receiverId, text } = data;
 
-        // Emit message to both users
-        SocketHelper.io.to(senderId).emit('receive_message', message);
-        SocketHelper.io.to(receiverId).emit('receive_message', message);
+      // 1. Save message
+      const message = await Message.create({ chatId, senderId, text });
 
-        // Create the notification
-        const notification = await Notification.create({
-          userId: receiverId,
-          message: 'You received a new message!',
-          type: 'message',
-        });
+      // 2. Emit message to sender & receiver
+      this.io.to(senderId).emit('receive_message', message);
+      this.io.to(receiverId).emit('receive_message', message);
 
-        // Emit the notification to the receiver
-        SocketHelper.io.to(receiverId).emit('receive_notification', notification);
-      } catch (err) {
-        errorLogger.error('❌ Error saving message or notification:', err);
-      }
-    });
+      // 3. Create and emit notification to receiver
+      const notification = await Notification.create({
+        userId: receiverId,
+        message: 'You received a new message!',
+        type: 'message',
+      });
 
-    socket.on('disconnect', () => {
-      logger.info(`❌ Socket disconnected: ${socket.id}`);
-    });
+      this.io.to(receiverId).emit('receive_notification', notification);
+    } catch (err) {
+      errorLogger.error('❌ Error handling message:', err);
+    }
+  }
+
+  private static handleDisconnect(socket: Socket) {
+    logger.info(`❌ Socket disconnected: ${socket.id}`);
   }
 }
 

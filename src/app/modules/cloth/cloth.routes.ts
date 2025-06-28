@@ -10,24 +10,29 @@ import { USER_ROLES } from '../../../enums/user';
 
 const router = express.Router();
 
-router.post(
-  '/',
-  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  validateRequest(createClothZodSchema),
-  clothController.createCloth
-);
+router.route('/')
+  .post(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    validateRequest(createClothZodSchema),
+    clothController.createCloth
+  )
+  .get(
+    clothController.getAllCloths
+  );
 
-router.get('/', clothController.getAllCloths);
 
-router.get('/:id', clothController.getSingleCloth);
-
-router.patch(
-  '/:id',
-  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  validateRequest(updateClothZodSchema),
-  clothController.updateCloth
-);
-
-router.delete('/:id', auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN), clothController.deleteCloth);
+router.route('/:id')
+  .patch(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+    validateRequest(updateClothZodSchema),
+    clothController.updateCloth
+  )
+  .get(
+    clothController.getSingleCloth 
+  )
+  .delete(
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN), 
+    clothController.deleteCloth
+  );
 
 export const ClothRoutes = router;

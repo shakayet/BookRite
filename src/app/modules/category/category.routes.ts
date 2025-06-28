@@ -7,15 +7,23 @@ import { categoryValidationSchema } from './category.validation';
 
 const router = express.Router();
 
-router.post(
-  '/',
-  auth(),
-  validateRequest(categoryValidationSchema),
-  categoryController.createCategory
-);
+router.route('/')
+  .post(
+    auth(),
+    validateRequest(categoryValidationSchema),
+    categoryController.createCategory
+  )
+  .get(
+    categoryController.getAllCategories
+  );
 
-router.get('/', categoryController.getAllCategories);
-router.get('/:id', categoryController.getSingleCategory);
-router.delete('/:id', auth(), categoryController.deleteCategory);
+router.route('/:id')
+  .get(
+    categoryController.getSingleCategory
+  )
+  .delete(
+    auth(),
+    categoryController.deleteCategory
+  );
 
 export const CategoryRoutes = router;

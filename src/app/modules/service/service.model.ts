@@ -50,5 +50,4 @@ const serviceSchema = new Schema<IService>(
   { timestamps: true }
 );
 
-
 export const Service = model<IService>('Service', serviceSchema);

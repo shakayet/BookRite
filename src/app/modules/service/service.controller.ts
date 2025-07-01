@@ -3,9 +3,6 @@ import httpStatus from 'http-status-codes';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { ServiceService } from './service.service';
-import ApiError from '../../../errors/ApiError';
-import { Notification } from '../notification/notification.model';
-import SocketHelper from '../../../helpers/socketHelper';
 
 const createService = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
@@ -80,16 +77,18 @@ const getTrendingServices = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getRecommendedServices = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user;
-  const result = await ServiceService.getRecommendedServices(user);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Recommended services fetched successfully',
-    data: result,
-  });
-});
+const getRecommendedServices = catchAsync(
+  async (req: Request, res: Response) => {
+    const user = req.user;
+    const result = await ServiceService.getRecommendedServices(user);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Recommended services fetched successfully',
+      data: result,
+    });
+  }
+);
 
 const getAllCategories = catchAsync(async (req: Request, res: Response) => {
   const result = await ServiceService.getAllCategories();
@@ -128,7 +127,11 @@ const updateService = catchAsync(async (req: Request, res: Response) => {
 
 const bookServiceSlot = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
-  const result = await ServiceService.bookServiceSlot(req.params.id, req.body, user);
+  const result = await ServiceService.bookServiceSlot(
+    req.params.id,
+    req.body,
+    user
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -150,14 +153,18 @@ const getProviderDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
-// now work on this 
+// now work on this
 
 const updateBookingStatus = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const { serviceId, bookingId } = req.params;
 
-  const result = await ServiceService.updateBookingStatus(serviceId, bookingId, req.body.serviceStatus, user);
+  const result = await ServiceService.updateBookingStatus(
+    serviceId,
+    bookingId,
+    req.body.serviceStatus,
+    user
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -167,13 +174,18 @@ const updateBookingStatus = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-
 const rateBooking = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const { serviceId, bookingId } = req.params;
   const { rating, recommended } = req.body;
 
-  const result = await ServiceService.rateBooking(serviceId, bookingId, user, rating, recommended);
+  const result = await ServiceService.rateBooking(
+    serviceId,
+    bookingId,
+    user,
+    rating,
+    recommended
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -183,34 +195,34 @@ const rateBooking = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getTopRecommendedServices = catchAsync(async (req: Request, res: Response) => {
-  const limit = parseInt(req.query.limit as string) || 20;
-  const result = await ServiceService.getMostRecommendedServices(limit);
-  
-  if (result.length === 0) {
-    // Log this for debugging
-    console.warn('No recommended services found despite querying');
-    // Optionally return different status code
-    return sendResponse(res, {
-      statusCode: httpStatus.NO_CONTENT,
+const getTopRecommendedServices = catchAsync(
+  async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const result = await ServiceService.getMostRecommendedServices(limit);
+
+    if (result.length === 0) {
+      // Log this for debugging
+      //console.warn('No recommended services found despite querying');
+      // Optionally return different status code
+      return sendResponse(res, {
+        statusCode: httpStatus.NO_CONTENT,
+        success: true,
+        message: 'No recommended services found yet',
+        data: [],
+      });
+    }
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
       success: true,
-      message: 'No recommended services found yet',
-      data: []
+      message:
+        result.length > 1
+          ? 'Top recommended services fetched successfully'
+          : 'Recommended service fetched successfully',
+      data: result,
     });
   }
-  
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: result.length > 1 
-      ? 'Top recommended services fetched successfully' 
-      : 'Recommended service fetched successfully',
-    data: result,
-  });
-});
-
-
-
+);
 
 export const ServiceController = {
   createService,

@@ -153,7 +153,6 @@ const getProviderDashboard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// now work on this
 
 const updateBookingStatus = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
@@ -201,9 +200,6 @@ const getTopRecommendedServices = catchAsync(
     const result = await ServiceService.getMostRecommendedServices(limit);
 
     if (result.length === 0) {
-      // Log this for debugging
-      //console.warn('No recommended services found despite querying');
-      // Optionally return different status code
       return sendResponse(res, {
         statusCode: httpStatus.NO_CONTENT,
         success: true,
